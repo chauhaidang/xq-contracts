@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: XQ Fitness Write Service API
   description: Write service for creating, updating, and deleting workout routines and related data
-  version: 1.2.0
+  version: 1.3.0
   contact:
     name: XQ Fitness Team
 
@@ -237,6 +237,160 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /exercises:
+    post:
+      summary: Create a new exercise
+      description: |
+        Creates a new exercise for a muscle group in a workout day. Simplified model: stores total reps, weight, and total sets directly.
+        Multiple exercises can be associated with the same muscle group.
+      operationId: createExercise
+      tags:
+        - Exercises
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExerciseRequest'
+      responses:
+        '201':
+          description: Exercise created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Workout day or muscle group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /exercises/{exerciseId}:
+    get:
+      summary: Get exercise details by ID
+      description: Retrieves exercise details including total reps, weight, and total sets
+      operationId: getExercise
+      tags:
+        - Exercises
+      parameters:
+        - name: exerciseId
+          in: path
+          description: ID of the exercise to retrieve
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Exercise retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+        '404':
+          description: Exercise not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Update exercise information
+      description: |
+        Updates exercise information. Can update any combination of fields (exerciseName, totalReps, weight, totalSets, notes).
+        All fields are optional - omitted fields remain unchanged (partial update supported).
+      operationId: updateExercise
+      tags:
+        - Exercises
+      parameters:
+        - name: exerciseId
+          in: path
+          description: ID of the exercise to update
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExerciseRequest'
+      responses:
+        '200':
+          description: Exercise updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Exercise not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Delete an exercise
+      description: Deletes an exercise
+      operationId: deleteExercise
+      tags:
+        - Exercises
+      parameters:
+        - name: exerciseId
+          in: path
+          description: ID of the exercise to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Exercise deleted successfully
+        '404':
+          description: Exercise not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /workout-day-sets:
     post:
       summary: Add sets configuration to a workout day
@@ -246,6 +400,9 @@ paths:
         **Upsert behavior:** If a sets configuration already exists for the given workout day and muscle group,
         it will be updated instead of creating a new one. This prevents duplicate entries and allows
         easy updates without needing to know the setId.
+        
+        **Deprecated:** This endpoint is deprecated. Use `POST /exercises` instead.
+      deprecated: true
       operationId: createWorkoutDaySet
       tags:
         - Workout Day Sets
@@ -298,6 +455,9 @@ paths:
         2. Provide `workoutDayId` and `muscleGroupId` as query parameters (e.g., `/workout-day-sets/0?workoutDayId=1&muscleGroupId=2`) - alternative method when setId is unknown
         
         When query parameters are provided, they take precedence and the setId in the path is ignored.
+        
+        **Deprecated:** This endpoint is deprecated. Use `PUT /exercises/{exerciseId}` instead.
+      deprecated: true
       operationId: updateWorkoutDaySet
       tags:
         - Workout Day Sets
@@ -357,7 +517,11 @@ paths:
 
     delete:
       summary: Delete sets configuration
-      description: Removes a sets configuration from a workout day
+      description: |
+        Removes a sets configuration from a workout day.
+        
+        **Deprecated:** This endpoint is deprecated. Use `DELETE /exercises/{exerciseId}` instead.
+      deprecated: true
       operationId: deleteWorkoutDaySet
       tags:
         - Workout Day Sets
@@ -626,6 +790,135 @@ components:
         notes:
           type: string
           example: "Focus on progressive overload"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateExerciseRequest:
+      type: object
+      required:
+        - workoutDayId
+        - muscleGroupId
+        - exerciseName
+        - totalReps
+        - weight
+        - totalSets
+      properties:
+        workoutDayId:
+          type: integer
+          format: int64
+          example: 1
+        muscleGroupId:
+          type: integer
+          format: int64
+          example: 3
+        exerciseName:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Bench Press"
+        totalReps:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Total number of repetitions across all sets
+          example: 30
+        weight:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Weight used (can represent average weight or single weight value)
+          example: 135
+        totalSets:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Total number of sets performed
+          example: 3
+        notes:
+          type: string
+          maxLength: 1000
+          example: "Focus on form"
+
+    UpdateExerciseRequest:
+      type: object
+      properties:
+        exerciseName:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: "Bench Press"
+        totalReps:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Total number of repetitions across all sets
+          example: 35
+        weight:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Weight used (can represent average weight or single weight value)
+          example: 140
+        totalSets:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Total number of sets performed
+          example: 3
+        notes:
+          type: string
+          maxLength: 1000
+          example: "Updated notes"
+
+    ExerciseResponse:
+      type: object
+      required:
+        - id
+        - workoutDayId
+        - muscleGroupId
+        - exerciseName
+        - totalReps
+        - weight
+        - totalSets
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 1
+        workoutDayId:
+          type: integer
+          format: int64
+          example: 1
+        muscleGroupId:
+          type: integer
+          format: int64
+          example: 3
+        exerciseName:
+          type: string
+          example: "Bench Press"
+        totalReps:
+          type: integer
+          format: int64
+          description: Total number of repetitions across all sets
+          example: 30
+        weight:
+          type: number
+          format: decimal
+          description: Weight used (can represent average weight or single weight value)
+          example: 135
+        totalSets:
+          type: integer
+          format: int64
+          description: Total number of sets performed
+          example: 3
+        notes:
+          type: string
+          nullable: true
+          example: "Focus on form"
         createdAt:
           type: string
           format: date-time
