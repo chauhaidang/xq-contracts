@@ -2,13 +2,13 @@ openapi: 3.0.3
 info:
   title: XQ Fitness Read Service API
   description: Read-only service for querying workout routines and related data
-  version: 1.2.1
+  version: 1.3.1
   contact:
     name: XQ Fitness Team
 
 servers:
-  - url: http://localhost:8080/api/v1
-    description: Local development server
+  - url: http://localhost:3000/api/v1
+    description: Local development server (Node.js read-service)
 
 paths:
   /muscle-groups:
@@ -194,6 +194,8 @@ paths:
         For new snapshots: muscleGroupTotals sums total_sets from all exercises within each muscle group.
         For old snapshots (backward compatibility): uses existing snapshot_workout_day_sets aggregation.
         If no snapshot exists for the current week, returns an empty report with all muscle groups showing zero sets.
+        Each exercise total also includes progressive overload indicators (progressStatusRep, progressStatusWeight)
+        that compare the current week's values against the previous week.
       operationId: getWeeklyReport
       tags:
         - Reports
@@ -458,13 +460,13 @@ components:
         totalReps:
           type: integer
           format: int64
-          description: Total number of repetitions for an exercise, if there are occurencess of same exercise in different days, it will get the higher one
+          description: Total number of repetitions across all sets
           minimum: 0
           example: 30
         weight:
           type: number
           format: decimal
-          description: Weight used of an exercise, if there are occurencess of same exercise in different days, it will get the higher one
+          description: Weight used (can represent average weight or single weight value)
           minimum: 0
           example: 135
         totalSets:
@@ -500,15 +502,39 @@ components:
         totalReps:
           type: integer
           format: int64
-          description: Total reps (stored value from total_reps column)
+          description: Total reps, if there are more than one occurence of same exercise in different days, it will get the higher one
           minimum: 0
           example: 30
         totalWeight:
           type: number
           format: decimal
-          description: Total weight (stored value from weight column, or calculated as weight × total_reps if needed)
+          description: Total weight, if there are more than one occurence of same exercise in different days, it will get the higher one
           minimum: 0
           example: 135
+        progressStatusRep:
+          type: string
+          description: |
+            Progressive overload status for total reps compared to the previous week's snapshot.
+            INCREASED = more reps than last week, DECREASED = fewer reps, MAINTAINED = same reps.
+            Null if there is no previous week snapshot to compare against.
+          enum:
+            - INCREASED
+            - DECREASED
+            - MAINTAINED
+          nullable: true
+          example: "INCREASED"
+        progressStatusWeight:
+          type: string
+          description: |
+            Progressive overload status for total weight compared to the previous week's snapshot.
+            INCREASED = more weight than last week, DECREASED = less weight, MAINTAINED = same weight.
+            Null if there is no previous week snapshot to compare against.
+          enum:
+            - INCREASED
+            - DECREASED
+            - MAINTAINED
+          nullable: true
+          example: "MAINTAINED"
 
     Error:
       type: object
