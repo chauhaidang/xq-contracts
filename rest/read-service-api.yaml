@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: XQ Fitness Read Service API
   description: Read-only service for querying workout routines and related data
-  version: 1.2.0
+  version: 1.2.1
   contact:
     name: XQ Fitness Team
 
@@ -19,20 +19,20 @@ paths:
       tags:
         - Muscle Groups
       responses:
-        '200':
+        "200":
           description: Successfully retrieved muscle groups
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/MuscleGroup'
-        '500':
+                  $ref: "#/components/schemas/MuscleGroup"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /routines:
     get:
@@ -49,20 +49,20 @@ paths:
           schema:
             type: boolean
       responses:
-        '200':
+        "200":
           description: Successfully retrieved routines
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/WorkoutRoutine'
-        '500':
+                  $ref: "#/components/schemas/WorkoutRoutine"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /exercises:
     get:
@@ -89,26 +89,26 @@ paths:
             type: integer
             format: int64
       responses:
-        '200':
+        "200":
           description: Successfully retrieved exercises
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Exercise'
-        '400':
+                  $ref: "#/components/schemas/Exercise"
+        "400":
           description: Invalid request (missing workoutDayId)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /routines/{routineId}:
     get:
@@ -128,24 +128,24 @@ paths:
             type: integer
             format: int64
       responses:
-        '200':
+        "200":
           description: Successfully retrieved routine
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkoutRoutineDetail'
-        '404':
+                $ref: "#/components/schemas/WorkoutRoutineDetail"
+        "404":
           description: Routine not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /routines/{routineId}/days:
     get:
@@ -163,26 +163,26 @@ paths:
             type: integer
             format: int64
       responses:
-        '200':
+        "200":
           description: Successfully retrieved workout days
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/WorkoutDayDetail'
-        '404':
+                  $ref: "#/components/schemas/WorkoutDayDetail"
+        "404":
           description: Routine not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
   /routines/{routineId}/weekly-report:
     get:
@@ -213,24 +213,24 @@ paths:
             type: string
             format: date
       responses:
-        '200':
+        "200":
           description: Weekly report retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WeeklyReportResponse'
-        '404':
+                $ref: "#/components/schemas/WeeklyReportResponse"
+        "404":
           description: Routine not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '500':
+                $ref: "#/components/schemas/Error"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
 components:
   schemas:
@@ -282,13 +282,13 @@ components:
 
     WorkoutRoutineDetail:
       allOf:
-        - $ref: '#/components/schemas/WorkoutRoutine'
+        - $ref: "#/components/schemas/WorkoutRoutine"
         - type: object
           properties:
             workoutDays:
               type: array
               items:
-                $ref: '#/components/schemas/WorkoutDayDetail'
+                $ref: "#/components/schemas/WorkoutDayDetail"
 
     WorkoutDay:
       type: object
@@ -324,19 +324,19 @@ components:
 
     WorkoutDayDetail:
       allOf:
-        - $ref: '#/components/schemas/WorkoutDay'
+        - $ref: "#/components/schemas/WorkoutDay"
         - type: object
           properties:
             sets:
               type: array
               description: Deprecated - use exercises instead
               items:
-                $ref: '#/components/schemas/WorkoutDaySet'
+                $ref: "#/components/schemas/WorkoutDaySet"
             exercises:
               type: array
               description: Exercises for this workout day (includes totalReps, weight, totalSets)
               items:
-                $ref: '#/components/schemas/Exercise'
+                $ref: "#/components/schemas/Exercise"
 
     WorkoutDaySet:
       type: object
@@ -355,7 +355,7 @@ components:
           format: int64
           example: 1
         muscleGroup:
-          $ref: '#/components/schemas/MuscleGroup'
+          $ref: "#/components/schemas/MuscleGroup"
         numberOfSets:
           type: integer
           minimum: 1
@@ -404,13 +404,13 @@ components:
             Total sets per muscle group. For new snapshots: sums total_sets from all exercises within each muscle group.
             For old snapshots: uses existing snapshot_workout_day_sets aggregation (backward compatibility).
           items:
-            $ref: '#/components/schemas/MuscleGroupTotal'
+            $ref: "#/components/schemas/MuscleGroupTotal"
         exerciseTotals:
           type: array
           description: Exercise-level totals (total reps and total weights) for each exercise
           items:
-            $ref: '#/components/schemas/ExerciseTotal'
-    
+            $ref: "#/components/schemas/ExerciseTotal"
+
     MuscleGroupTotal:
       type: object
       required:
@@ -418,7 +418,7 @@ components:
         - totalSets
       properties:
         muscleGroup:
-          $ref: '#/components/schemas/MuscleGroup'
+          $ref: "#/components/schemas/MuscleGroup"
         totalSets:
           type: integer
           description: |
@@ -454,17 +454,17 @@ components:
           type: string
           example: "Bench Press"
         muscleGroup:
-          $ref: '#/components/schemas/MuscleGroup'
+          $ref: "#/components/schemas/MuscleGroup"
         totalReps:
           type: integer
           format: int64
-          description: Total number of repetitions across all sets
+          description: Total number of repetitions for an exercise, if there are occurencess of same exercise in different days, it will get the higher one
           minimum: 0
           example: 30
         weight:
           type: number
           format: decimal
-          description: Weight used (can represent average weight or single weight value)
+          description: Weight used of an exercise, if there are occurencess of same exercise in different days, it will get the higher one
           minimum: 0
           example: 135
         totalSets:
@@ -496,7 +496,7 @@ components:
           type: string
           example: "Bench Press"
         muscleGroup:
-          $ref: '#/components/schemas/MuscleGroup'
+          $ref: "#/components/schemas/MuscleGroup"
         totalReps:
           type: integer
           format: int64
