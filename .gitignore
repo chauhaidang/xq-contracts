@@ -39,3 +39,7 @@ go.work
 # OS specific
 .DS_Store
 Thumbs.db
+rest-gen
+proto-gen
+database-gen
+kafka-gen
