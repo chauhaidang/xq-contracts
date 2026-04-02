@@ -1,0 +1,52 @@
+name: Publish API Clients
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'rest/**'
+      - 'package-template.json'
+      - '.npmrc-template'
+      - 'scripts/publish-clients.js'
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+
+      - name: Build API Clients
+        run: node scripts/publish-clients.js
+
+      - name: Publish to GitHub Packages
+        run: |
+          for client_dir in rest-gen/*/; do
+            if [ -d "$client_dir" ]; then
+              echo "==> Publishing $(basename $client_dir)"
+              cd "$client_dir"
+              PACKAGE_NAME=$(node -p "require('./package.json').name")
+              VERSION=$(node -p "require('./package.json').version")
+              
+              if npm view "$PACKAGE_NAME@$VERSION" version > /dev/null 2>&1; then
+                echo "⚠️ Version $VERSION of $PACKAGE_NAME already exists in registry. Skipping..."
+              else
+                echo "🚀 Publishing $PACKAGE_NAME@$VERSION..."
+                npm publish || echo "❌ Failed to publish $PACKAGE_NAME@$VERSION"
+              fi
+              cd - > /dev/null
+            fi
+          done
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
