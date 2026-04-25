@@ -1,0 +1,61 @@
+name: Publish Python API Clients
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'rest/**'
+      - 'scripts/generate_python_clients.py'
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          uv tool install openapi-python-client
+          uv pip install twine --system
+
+      - name: Generate Python Clients
+        run: uv run python scripts/generate_python_clients.py
+
+      - name: Build distributions
+        run: |
+          for client_dir in rest-gen-py/*/; do
+            if [ -d "$client_dir" ]; then
+              echo "==> Building $(basename $client_dir)"
+              cd "$client_dir"
+              uv build
+              cd - > /dev/null
+            fi
+          done
+
+      - name: Publish to GitHub Packages
+        run: |
+          for client_dir in rest-gen-py/*/; do
+            if [ -d "$client_dir/dist" ]; then
+              PACKAGE=$(basename "$client_dir")
+              echo "==> Publishing $PACKAGE"
+              twine upload \
+                --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }}/ \
+                --username ${{ github.repository_owner }} \
+                --password ${{ secrets.GITHUB_TOKEN }} \
+                --skip-existing \
+                "$client_dir/dist/*" \
+                || echo "❌ Failed to publish $PACKAGE"
+            fi
+          done
