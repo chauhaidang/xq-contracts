@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: XQ Fitness Write Service API
-  description: Write service for creating, updating, and deleting workout routines and related data
-  version: 1.3.0
+  title: XQ Fitness API
+  description: Unified read and write API for workout routines and related data
+  version: 2.1.0
   contact:
     name: XQ Fitness Team
 
@@ -11,7 +11,58 @@ servers:
     description: Local development server
 
 paths:
+  /muscle-groups:
+    get:
+      summary: Get all muscle groups
+      description: Retrieves a list of all available muscle groups
+      operationId: getMuscleGroups
+      tags:
+        - Muscle Groups
+      responses:
+        '200':
+          description: Successfully retrieved muscle groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MuscleGroup'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /routines:
+    get:
+      summary: Get all workout routines
+      description: Retrieves a list of all workout routines
+      operationId: getRoutines
+      tags:
+        - Routines
+      parameters:
+        - name: isActive
+          in: query
+          description: Filter by active status
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successfully retrieved routines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkoutRoutine'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       summary: Create a new workout routine
       description: Creates a new workout routine
@@ -45,6 +96,40 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /routines/{routineId}:
+    get:
+      summary: Get a specific workout routine
+      description: |
+        Retrieves a workout routine with all its days, sets configuration (deprecated), and exercises.
+      operationId: getRoutineById
+      tags:
+        - Routines
+      parameters:
+        - name: routineId
+          in: path
+          description: ID of the routine to retrieve
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successfully retrieved routine
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkoutRoutineDetail'
+        '404':
+          description: Routine not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     put:
       summary: Update a workout routine
       description: Updates an existing workout routine
@@ -238,6 +323,49 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /exercises:
+    get:
+      summary: Get exercises for a workout day
+      description: |
+        Retrieves exercises for a workout day, optionally filtered by muscle group.
+      operationId: getExercises
+      tags:
+        - Exercises
+      parameters:
+        - name: workoutDayId
+          in: query
+          description: Filter by workout day (required)
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: muscleGroupId
+          in: query
+          description: Filter by muscle group (optional)
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successfully retrieved exercises
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exercise'
+        '400':
+          description: Invalid request (missing workoutDayId)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       summary: Create a new exercise
       description: |
@@ -455,9 +583,6 @@ paths:
         2. Provide `workoutDayId` and `muscleGroupId` as query parameters (e.g., `/workout-day-sets/0?workoutDayId=1&muscleGroupId=2`) - alternative method when setId is unknown
         
         When query parameters are provided, they take precedence and the setId in the path is ignored.
-        
-        **Deprecated:** This endpoint is deprecated. Use `PUT /exercises/{exerciseId}` instead.
-      deprecated: true
       operationId: updateWorkoutDaySet
       tags:
         - Workout Day Sets
@@ -538,6 +663,86 @@ paths:
           description: Sets configuration deleted successfully
         '404':
           description: Sets configuration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /routines/{routineId}/days:
+    get:
+      summary: Get all workout days for a routine
+      description: Retrieves all workout days for a specific routine
+      operationId: getWorkoutDays
+      tags:
+        - Workout Days
+      parameters:
+        - name: routineId
+          in: path
+          description: ID of the routine
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successfully retrieved workout days
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkoutDayDetail'
+        '404':
+          description: Routine not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /routines/{routineId}/weekly-report:
+    get:
+      summary: Get weekly report for a routine
+      description: |
+        Retrieves a weekly report showing total sets per muscle group and exercise-level totals.
+      operationId: getWeeklyReport
+      tags:
+        - Reports
+      parameters:
+        - name: routineId
+          in: path
+          description: ID of the routine to get report for
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: weekStartDate
+          in: query
+          description: Optional week start date (Monday) in ISO 8601 format (YYYY-MM-DD)
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Weekly report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyReportResponse'
+        '404':
+          description: Routine not found
           content:
             application/json:
               schema:
@@ -954,6 +1159,249 @@ components:
           format: date-time
           description: Timestamp when the snapshot was created
           example: "2024-12-07T10:30:00Z"
+
+    MuscleGroup:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 13
+        name:
+          type: string
+          example: "Abductor"
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    WorkoutRoutine:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkoutRoutineDetail:
+      allOf:
+        - $ref: '#/components/schemas/WorkoutRoutine'
+        - type: object
+          properties:
+            workoutDays:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkoutDayDetail'
+
+    WorkoutDay:
+      type: object
+      required:
+        - id
+        - routineId
+        - dayNumber
+        - dayName
+      properties:
+        id:
+          type: integer
+          format: int64
+        routineId:
+          type: integer
+          format: int64
+        dayNumber:
+          type: integer
+        dayName:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WorkoutDayDetail:
+      allOf:
+        - $ref: '#/components/schemas/WorkoutDay'
+        - type: object
+          properties:
+            sets:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkoutDaySet'
+            exercises:
+              type: array
+              items:
+                $ref: '#/components/schemas/Exercise'
+
+    WorkoutDaySet:
+      type: object
+      required:
+        - id
+        - workoutDayId
+        - muscleGroup
+        - numberOfSets
+      properties:
+        id:
+          type: integer
+          format: int64
+        workoutDayId:
+          type: integer
+          format: int64
+        muscleGroup:
+          $ref: '#/components/schemas/MuscleGroup'
+        numberOfSets:
+          type: integer
+          minimum: 1
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    WeeklyReportResponse:
+      type: object
+      required:
+        - routineId
+        - weekStartDate
+        - hasSnapshot
+        - muscleGroupTotals
+        - exerciseTotals
+      properties:
+        routineId:
+          type: integer
+          format: int64
+        weekStartDate:
+          type: string
+          format: date
+        hasSnapshot:
+          type: boolean
+        snapshotCreatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        muscleGroupTotals:
+          type: array
+          items:
+            $ref: '#/components/schemas/MuscleGroupTotal'
+        exerciseTotals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExerciseTotal'
+
+    MuscleGroupTotal:
+      type: object
+      required:
+        - muscleGroup
+        - totalSets
+      properties:
+        muscleGroup:
+          $ref: '#/components/schemas/MuscleGroup'
+        totalSets:
+          type: integer
+          minimum: 0
+
+    Exercise:
+      type: object
+      required:
+        - id
+        - workoutDayId
+        - muscleGroupId
+        - exerciseName
+        - totalReps
+        - weight
+        - totalSets
+      properties:
+        id:
+          type: integer
+          format: int64
+        workoutDayId:
+          type: integer
+          format: int64
+        muscleGroupId:
+          type: integer
+          format: int64
+        exerciseName:
+          type: string
+        muscleGroup:
+          $ref: '#/components/schemas/MuscleGroup'
+        totalReps:
+          type: integer
+          format: int64
+          minimum: 0
+        weight:
+          type: number
+          format: decimal
+          minimum: 0
+        totalSets:
+          type: integer
+          format: int64
+          minimum: 0
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ExerciseTotal:
+      type: object
+      required:
+        - exerciseName
+        - muscleGroup
+        - totalReps
+        - totalWeight
+      properties:
+        exerciseName:
+          type: string
+        muscleGroup:
+          $ref: '#/components/schemas/MuscleGroup'
+        totalReps:
+          type: integer
+          format: int64
+          minimum: 0
+        totalWeight:
+          type: number
+          format: decimal
+          minimum: 0
+        progressStatusRep:
+          type: string
+          enum:
+            - INCREASED
+            - DECREASED
+            - MAINTAINED
+          nullable: true
+        progressStatusWeight:
+          type: string
+          enum:
+            - INCREASED
+            - DECREASED
+            - MAINTAINED
+          nullable: true
 
     Error:
       type: object
