@@ -28,7 +28,6 @@ jobs:
       - name: Install dependencies
         run: |
           uv tool install openapi-python-client
-          uv pip install twine --system
 
       - name: Generate Python Clients
         run: uv run python scripts/generate_python_clients.py
@@ -50,7 +49,7 @@ jobs:
             if [ -d "$client_dir/dist" ]; then
               PACKAGE=$(basename "$client_dir")
               echo "==> Publishing $PACKAGE"
-              twine upload \
+              uvx twine upload \
                 --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }}/ \
                 --username ${{ github.repository_owner }} \
                 --password ${{ secrets.GITHUB_TOKEN }} \
