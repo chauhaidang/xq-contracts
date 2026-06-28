@@ -49,16 +49,16 @@ The package version is automatically synced from the `info.version` field in eac
 
 ## Using a Generated Client in Another Project
 
-Install directly from GitHub Packages:
-
-```bash
-uv add chauhaidang-read-service-api --index https://pypi.pkg.github.com/chauhaidang/
-```
-
-Or install locally during development:
+Install locally during development:
 
 ```bash
 uv add ./path/to/rest-gen-py/read-service-api
+```
+
+CI also uploads built wheel and source distributions to a GitHub Release tagged `python-clients-<commit-sha>`. Install a wheel directly from a release asset URL:
+
+```bash
+uv add "https://github.com/chauhaidang/xq-contracts/releases/download/python-clients-<commit-sha>/xq_fitness_read_service_api_client-1.3.1-py3-none-any.whl"
 ```
 
 Basic usage:
@@ -73,13 +73,13 @@ with client as c:
     muscle_groups = get_muscle_groups.sync(client=c)
 ```
 
-## CI / Publishing
+## CI
 
 The workflow [`.github/workflows/publish-python-clients.yml`](../.github/workflows/publish-python-clients.yml) runs automatically on pushes to `main` that affect `rest/` or the generator script. It:
 
 1. Generates all clients
 2. Builds wheel and sdist distributions via `uv build`
-3. Publishes to GitHub Packages using `twine`
+3. Uploads the built distributions to a GitHub Release tagged `python-clients-<commit-sha>`
 
 To trigger manually, use the **workflow_dispatch** option in the Actions tab.
 

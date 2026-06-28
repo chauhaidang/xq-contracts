@@ -1,6 +1,6 @@
 # xq-contracts
 
-OpenAPI specs, protobuf definitions, and database schema for the XQ Fitness platform. Generated API clients for TypeScript and Python are published automatically from this repository.
+OpenAPI specs, protobuf definitions, and database schema for the XQ Fitness platform. Generated TypeScript API clients are published automatically from this repository, and Python client distributions are published to GitHub Releases.
 
 ## Contents
 
@@ -27,10 +27,10 @@ OpenAPI specs, protobuf definitions, and database schema for the XQ Fitness plat
 
 ## CI
 
-Both TypeScript and Python clients are built and published automatically on pushes to `main` that affect `rest/`.
+TypeScript clients are built and published automatically on pushes to `main` that affect `rest/`. Python clients are built and uploaded to a GitHub Release tagged `python-clients-<commit-sha>`.
 
 - [`.github/workflows/publish-clients.yml`](.github/workflows/publish-clients.yml) — TypeScript
-- [`.github/workflows/publish-python-clients.yml`](.github/workflows/publish-python-clients.yml) — Python
+- [`.github/workflows/publish-python-clients.yml`](.github/workflows/publish-python-clients.yml) — Python GitHub Release assets
 
 ## License
 

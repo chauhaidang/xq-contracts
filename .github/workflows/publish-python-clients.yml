@@ -13,8 +13,7 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write
 
     steps:
       - name: Checkout Repository
@@ -43,17 +42,27 @@ jobs:
             fi
           done
 
-      - name: Publish to GitHub Packages
+      - name: Publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for client_dir in rest-gen-py/*/; do
-            if [ -d "$client_dir/dist" ]; then
-              PACKAGE=$(basename "$client_dir")
-              echo "==> Publishing $PACKAGE"
-              uvx twine upload \
-                --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }}/ \
-                --username ${{ github.repository_owner }} \
-                --password ${{ secrets.GITHUB_TOKEN }} \
-                "$client_dir/dist/*" \
-                || echo "❌ Failed to publish $PACKAGE"
-            fi
-          done
+          TAG="python-clients-${GITHUB_SHA}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          RELEASE_TITLE="Python API Clients ${SHORT_SHA}"
+          ASSETS=(rest-gen-py/*/dist/*)
+
+          if [ ! -e "${ASSETS[0]}" ]; then
+            echo "No Python client distributions found."
+            exit 1
+          fi
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists."
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$RELEASE_TITLE" \
+              --notes "Generated Python API client distributions for ${GITHUB_SHA}."
+          fi
+
+          gh release upload "$TAG" "${ASSETS[@]}" --clobber
