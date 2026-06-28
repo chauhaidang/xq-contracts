@@ -53,7 +53,6 @@ jobs:
                 --repository-url https://pypi.pkg.github.com/${{ github.repository_owner }}/ \
                 --username ${{ github.repository_owner }} \
                 --password ${{ secrets.GITHUB_TOKEN }} \
-                --skip-existing \
                 "$client_dir/dist/*" \
                 || echo "❌ Failed to publish $PACKAGE"
             fi
