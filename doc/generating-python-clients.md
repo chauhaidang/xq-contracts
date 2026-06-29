@@ -21,7 +21,7 @@ uv run scripts/generate_python_clients.py
 
 `uv run` automatically resolves the script's inline dependencies (declared via PEP 723) — no manual `pip install` needed.
 
-This reads every `.yaml` / `.json` file from `rest/`, generates a typed Python package for each, and writes the output to `rest-gen-py/`.
+This recursively reads every `.yaml` / `.json` file from `rest/`, generates a typed Python package for each, and writes the output to `rest-gen-py/`.
 
 ## Output Structure
 
@@ -35,7 +35,7 @@ rest-gen-py/
 │       ├── client.py
 │       ├── models/
 │       └── api/
-└── write-service-api/       # Generated from rest/write-service-api.yaml
+└── write-service-api/       # Generated from rest/write-service/write-service-api.yaml
     ├── pyproject.toml
     ├── README.md
     └── write_service_api/
@@ -85,4 +85,4 @@ To trigger manually, use the **workflow_dispatch** option in the Actions tab.
 
 ## Adding a New API Spec
 
-Drop a new `.yaml` or `.json` OpenAPI file into `rest/`. The generator and CI workflow will pick it up automatically — no script changes needed.
+Drop a new `.yaml` or `.json` OpenAPI file anywhere under `rest/`. The generator and CI workflow will pick it up automatically — no script changes needed.

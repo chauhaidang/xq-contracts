@@ -6,7 +6,7 @@ OpenAPI specs, protobuf definitions, and database schema for the XQ Fitness plat
 
 | Directory | Description |
 |---|---|
-| `rest/` | OpenAPI 3.0 specs for the read and write services |
+| `rest/` | OpenAPI 3.0 specs for generated read and write service clients |
 | `proto/` | Protobuf definitions |
 | `database/` | Prisma schema |
 | `scripts/` | Client generation scripts |
@@ -16,7 +16,7 @@ OpenAPI specs, protobuf definitions, and database schema for the XQ Fitness plat
 ## API Specs
 
 - **Read Service** — `rest/read-service-api.yaml` — query endpoints for workout data, muscle groups, and routines
-- **Write Service** — `rest/write-service-api.yaml` — create, update, and delete operations
+- **Write Service** — `rest/write-service/write-service-api.yaml` — create, update, and delete operations
 
 ## Generating Clients
 

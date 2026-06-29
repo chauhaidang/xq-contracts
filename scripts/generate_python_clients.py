@@ -15,7 +15,12 @@ BUILD_DIR = Path(__file__).parent.parent / "rest-gen-py"
 
 BUILD_DIR.mkdir(parents=True, exist_ok=True)
 
-files = [f for f in sorted(REST_DIR.iterdir()) if f.suffix in (".yaml", ".json")]
+files = sorted(f for f in REST_DIR.rglob("*") if f.suffix in (".yaml", ".json"))
+duplicate_base_names = sorted({f.stem for f in files if [candidate.stem for candidate in files].count(f.stem) > 1})
+
+if duplicate_base_names:
+    print(f"Duplicate REST contract names found: {', '.join(duplicate_base_names)}")
+    sys.exit(1)
 
 if not files:
     print("No OpenAPI spec files found in rest/")

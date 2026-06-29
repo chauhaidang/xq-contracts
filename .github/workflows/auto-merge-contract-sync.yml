@@ -1,0 +1,126 @@
+name: Auto Merge Contract Sync
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - labeled
+      - ready_for_review
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: auto-merge-contract-sync-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  CONTRACT_SYNC_LABEL: contract-sync
+  CONTRACT_SYNC_BRANCH_PREFIX: api-update/
+  TRUSTED_CONTRACT_SYNC_ACTORS: 'github-actions[bot],dependabot[bot],xq-contract-sync[bot],chauhaidang'
+  CONTRACT_SYNC_BOT_TOKEN: ${{ secrets.CONTRACT_SYNC_BOT_TOKEN }}
+
+jobs:
+  auto-merge:
+    name: Approve and enable auto-merge
+    runs-on: ubuntu-latest
+    if: >
+      !github.event.pull_request.draft &&
+      (
+        contains(github.event.pull_request.labels.*.name, 'contract-sync') ||
+        startsWith(github.event.pull_request.title, 'Update write-service API definition to v')
+      ) &&
+      startsWith(github.event.pull_request.head.ref, 'api-update/')
+
+    steps:
+      - name: Verify trusted sync PR
+        id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const trustedActors = process.env.TRUSTED_CONTRACT_SYNC_ACTORS
+              .split(",")
+              .map((actor) => actor.trim())
+              .filter(Boolean);
+
+            if (!trustedActors.includes(pr.user.login)) {
+              core.setFailed(`PR author ${pr.user.login} is not in TRUSTED_CONTRACT_SYNC_ACTORS.`);
+              return;
+            }
+
+            const titleMatch = pr.title.match(/^Update ([a-z0-9-]+) API definition to v[0-9A-Za-z._-]+$/);
+            if (!titleMatch) {
+              core.setFailed(`PR title does not match the expected API sync format: ${pr.title}`);
+              return;
+            }
+
+            const serviceName = titleMatch[1];
+            if (!pr.head.ref.startsWith(`api-update/${serviceName}-v`)) {
+              core.setFailed(`PR branch ${pr.head.ref} does not match expected api-update/${serviceName}-v* format.`);
+              return;
+            }
+
+            const expectedSyncFile = `rest/${serviceName}/${serviceName}-api.yaml`;
+            const allowedExactFiles = new Set([
+              expectedSyncFile,
+            ]);
+
+            const deniedPrefixes = [
+              ".github/",
+              "scripts/",
+            ];
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100,
+            });
+
+            const changedFiles = files.map((file) => file.filename);
+            const deniedFiles = changedFiles.filter((filename) =>
+              deniedPrefixes.some((prefix) => filename.startsWith(prefix))
+            );
+            const outsideAllowlist = changedFiles.filter((filename) =>
+              !allowedExactFiles.has(filename)
+            );
+
+            if (changedFiles.length === 0) {
+              core.setFailed("No changed files were found for this PR.");
+              return;
+            }
+
+            if (!changedFiles.includes(expectedSyncFile)) {
+              core.setFailed(`Expected sync file was not changed: ${expectedSyncFile}`);
+              return;
+            }
+
+            if (deniedFiles.length > 0 || outsideAllowlist.length > 0) {
+              core.setFailed([
+                "Contract sync PR contains files outside the allowed scope.",
+                `Denied files: ${deniedFiles.join(", ") || "none"}`,
+                `Outside allowlist: ${outsideAllowlist.join(", ") || "none"}`,
+              ].join("\n"));
+              return;
+            }
+
+            core.info(`Contract sync gate passed for ${changedFiles.length} changed file(s).`);
+
+      - name: Approve PR with bot token
+        if: env.CONTRACT_SYNC_BOT_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ env.CONTRACT_SYNC_BOT_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr review "$PR_URL" --approve --body "Approved by contract sync automation after allowlist validation."
+
+      - name: Enable squash auto-merge
+        env:
+          GH_TOKEN: ${{ env.CONTRACT_SYNC_BOT_TOKEN || github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge "$PR_URL" --squash --auto
