@@ -26,27 +26,87 @@ if (!fs.existsSync(BUILD_DIR)) {
   fs.mkdirSync(BUILD_DIR, { recursive: true });
 }
 
-// Find all yaml or json openapi contracts
-const files = fs.readdirSync(REST_DIR).filter(f => f.endsWith('.yaml') || f.endsWith('.json'));
+function getOpenApiInfoVersion(yamlContent, fallbackVersion) {
+  try {
+    const spec = JSON.parse(yamlContent);
+    return spec.info?.version || fallbackVersion;
+  } catch {
+    // Not JSON; continue with the YAML scanner below.
+  }
+
+  const lines = yamlContent.split(/\r?\n/);
+  const infoIndex = lines.findIndex(line => /^info:\s*$/.test(line));
+
+  if (infoIndex === -1) {
+    return fallbackVersion;
+  }
+
+  for (let i = infoIndex + 1; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (/^\S/.test(line)) {
+      break;
+    }
+
+    const versionMatch = line.match(/^\s+version:\s*['"]?([^'"\s]+)['"]?\s*$/);
+    if (versionMatch) {
+      return versionMatch[1].trim();
+    }
+  }
+
+  return fallbackVersion;
+}
+
+function getContractFiles(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      return getContractFiles(entryPath);
+    }
+
+    if (entry.isFile() && (entry.name.endsWith('.yaml') || entry.name.endsWith('.json'))) {
+      return [entryPath];
+    }
+
+    return [];
+  }).sort();
+}
+
+function getClientBaseName(filePath) {
+  return path.parse(filePath).name;
+}
+
+// Find all yaml or json openapi contracts under rest/.
+const files = getContractFiles(REST_DIR);
+const duplicateBaseNames = files
+  .map(getClientBaseName)
+  .filter((baseName, index, baseNames) => baseNames.indexOf(baseName) !== index);
+
+if (duplicateBaseNames.length > 0) {
+  console.error(`Duplicate REST contract names found: ${[...new Set(duplicateBaseNames)].join(', ')}`);
+  process.exit(1);
+}
 
 let successCount = 0;
 
 async function buildClients() {
   const promises = files.map(async (file) => {
-    const baseName = path.basename(file, path.extname(file));
+    const baseName = getClientBaseName(file);
     const clientDir = path.join(BUILD_DIR, baseName);
 
     console.log(`🚀 Started building @chauhaidang/${baseName}...`);
 
-    if (!fs.existsSync(clientDir)) {
-      fs.mkdirSync(clientDir, { recursive: true });
+    if (fs.existsSync(clientDir)) {
+      fs.rmSync(clientDir, { recursive: true, force: true });
     }
+    fs.mkdirSync(clientDir, { recursive: true });
 
-    // Parse OpenAPI version
-    const yamlPath = path.resolve(REST_DIR, file);
+    // Parse OpenAPI info.version
+    const yamlPath = path.resolve(file);
     const yamlContent = fs.readFileSync(yamlPath, 'utf8');
-    const versionMatch = yamlContent.match(/version:\s*['"]?([0-9\.]+)['"]?/);
-    const apiVersion = versionMatch ? versionMatch[1].trim() : TEMPLATE_PKG.version || "1.0.0";
+    const apiVersion = getOpenApiInfoVersion(yamlContent, TEMPLATE_PKG.version || "1.0.0");
+    console.log(`📦 ${baseName} package version resolved from ${path.relative(REST_DIR, file)}: ${apiVersion}`);
 
     // 1. Scaffold package.json
     const pkg = { ...TEMPLATE_PKG };

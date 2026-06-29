@@ -1,0 +1,63 @@
+name: Validate Contract Sync
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'rest/**'
+      - 'api/**'
+      - 'proto/**'
+      - 'database/schema.prisma'
+      - 'doc/**'
+      - 'package-template.json'
+      - '.npmrc-template'
+      - 'scripts/generate_python_clients.py'
+      - 'scripts/publish-clients.js'
+      - '.github/workflows/validate-contract-sync.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate contracts and generated clients
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.12'
+
+      - name: Setup Buf
+        uses: bufbuild/buf-setup-action@v1
+
+      - name: Install Python client generator
+        run: uv tool install openapi-python-client
+
+      - name: Validate protobuf contracts
+        run: buf lint proto
+
+      - name: Validate Prisma schema
+        run: npx --yes prisma validate --schema database/schema.prisma
+
+      - name: Generate TypeScript clients
+        run: |
+          set -o pipefail
+          node scripts/publish-clients.js 2>&1 | tee ts-client-build.log
+          ! grep -q "❌" ts-client-build.log
+
+      - name: Generate Python clients
+        run: |
+          set -o pipefail
+          uv run python scripts/generate_python_clients.py 2>&1 | tee py-client-build.log
+          ! grep -q "❌" py-client-build.log
